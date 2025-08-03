@@ -1,6 +1,6 @@
 Movie Shop Management Dashboard (Frontend)
 Overview
-The Movie Shop Management Dashboard is a web-based application built with React.js to manage sales and customer data for a movie shop offering movie sales, PlayStation rentals, PlayStation games, and Wi-Fi vending. The frontend provides a user-friendly interface for recording sales, managing customers, viewing real-time analytics, and exporting reports. It integrates with a Node.js/MongoDB backend using JWT authentication for secure access.
+A user-friendly interface for recording sales, managing customers, viewing real-time analytics, and exporting reports. It integrates with a Node.js/MongoDB backend using JWT authentication for secure access.
 <img width="1920" height="1080" alt="Screenshot (107)" src="https://github.com/user-attachments/assets/158e98e8-99bc-42bf-9619-d998013d3a45" />
 
 Features
