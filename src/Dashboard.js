@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js';
 import { FiDownload, FiFilter, FiDollarSign, FiTrendingUp, FiUsers, FiAward, FiRefreshCw } from 'react-icons/fi';
@@ -21,18 +21,14 @@ function Dashboard() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
 
-
-
-  // Duplicate fetchCustomerCount removed to fix redeclaration error.
-
-  const formatEntityName = React.useCallback((entity) => {
+  const formatEntityName = useCallback((entity) => {
     if (!entity) return 'N/A';
     return entity
       .replace('_', ' ')
       .replace(/\b\w/g, l => l.toUpperCase());
   }, []);
 
-  const fetchCustomerCount = React.useCallback(async () => {
+  const fetchCustomerCount = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('https://movieshop.up.railway.app/api/customers', {
@@ -51,7 +47,7 @@ function Dashboard() {
     }
   }, []);
 
-  const processSalesData = React.useCallback((data) => {
+  const processSalesData = useCallback((data) => {
     if (!Array.isArray(data)) {
       console.error('Expected array, got:', data);
       setError('Invalid data format from server');
@@ -61,7 +57,6 @@ function Dashboard() {
 
     setSalesData(data);
 
-    // Calculate KPIs
     const totalSales = data.reduce((sum, item) => sum + (item.total || 0), 0);
     const saleCount = data.reduce((sum, item) => 
       sum + (item.entities?.reduce((c, e) => c + (e.count || 0), 0) || 0)
@@ -78,18 +73,17 @@ function Dashboard() {
       a[1] > b[1] ? a : b, ['', 0]
     )[0];
 
-    // Fetch customer count
     fetchCustomerCount();
     
     setKpis({ 
       totalSales, 
       topEntity: formatEntityName(topEntity), 
-      customerCount: 0, // Will be updated by fetchCustomerCount
+      customerCount: 0,
       averageSale 
     });
   }, [fetchCustomerCount, formatEntityName]);
 
-  const fetchSales = React.useCallback(async () => {
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -101,7 +95,6 @@ function Dashboard() {
         return;
       }
 
-      // Build query parameters
       const queryObj = {
         period,
         ...(entityFilter !== 'all' && { entity: entityFilter }),
@@ -152,13 +145,11 @@ function Dashboard() {
     }
   }, [period, entityFilter, dateRange, processSalesData]);
 
-  // (moved above processSalesData)
-
   useEffect(() => {
     fetchSales();
-    const interval = setInterval(fetchSales, 300000); // Refresh every 5 minutes
+    const interval = setInterval(fetchSales, 300000);
     return () => clearInterval(interval);
-  }, [period, entityFilter, dateRange, fetchSales]);
+  }, [fetchSales]);
 
   const handleExport = async () => {
     try {
@@ -201,7 +192,6 @@ function Dashboard() {
     }));
   };
 
-  // Chart data configurations
   const barChartData = {
     labels: salesData.map(item => item._id || 'N/A'),
     datasets: [{
@@ -247,21 +237,25 @@ function Dashboard() {
       title: {
         display: true,
         text: `${period.charAt(0).toUpperCase() + period.slice(1)} Sales`,
-        font: { size: 16, weight: '600' },
+        font: { size: 14, weight: '600' },
         color: '#1E40AF',
       },
       tooltip: {
         callbacks: {
-          label: (context) => {
-            return ` ${context.dataset.label}: ${context.raw} KES`;
-          }
+          label: (context) => ` ${context.dataset.label}: ${context.raw} KES`
         }
       },
     },
     scales: {
       y: {
         ticks: {
-          callback: (value) => `${value} KES`
+          callback: (value) => `${value} KES`,
+          font: { size: 10 }
+        }
+      },
+      x: {
+        ticks: {
+          font: { size: 10 }
         }
       }
     }
@@ -310,7 +304,7 @@ function Dashboard() {
           </button>
           {lastRefreshed && (
             <span className="last-refreshed">
-               {lastRefreshed}
+              {lastRefreshed}
             </span>
           )}
         </div>
@@ -341,7 +335,7 @@ function Dashboard() {
             <option value="movie">Movie Shop</option>
             <option value="playstation_game">PlayStation Game</option>
             <option value="playstation_rental">PlayStation Rental</option>
-            <option value="wifi">Wi-Fi Vending</option>
+            <option value="wifi">Internet</option>
           </select>
         </div>
 
@@ -478,13 +472,13 @@ function Dashboard() {
                       entity: entity.entity,
                       amount: entity.totalAmount,
                       date: item._id,
-                      customer: entity.customerName || 'N/A',
+                      customer: entity.customerName || '',
                     }))
                   ).slice(0, 10).map((sale, index) => (
                     <tr key={index}>
                       <td>{formatEntityName(sale.entity)}</td>
                       <td>{sale.amount?.toLocaleString() || '0'}</td>
-                      <td>{sale.date || 'N/A'}</td>
+                      <td>{sale.date || ' '}</td>
                       <td>{sale.customer}</td>
                     </tr>
                   ))}
@@ -498,20 +492,22 @@ function Dashboard() {
       {/* Styles */}
       <style jsx>{`
         .dashboard-container {
-          padding: 1rem;
+          padding: 0.5rem;
           background-color: #f8fafc;
           font-family: 'Inter', sans-serif;
+          max-width: 100%;
+          overflow-x: hidden;
         }
 
         .dashboard-header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
+          flex-direction: column;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
         }
 
         .dashboard-header h2 {
-          font-size: 1.5rem;
+          font-size: 1.25rem;
           color: #1e40af;
           margin: 0;
         }
@@ -519,20 +515,23 @@ function Dashboard() {
         .dashboard-actions {
           display: flex;
           align-items: center;
-          gap: 1rem;
+          gap: 0.75rem;
+          width: 100%;
+          justify-content: space-between;
         }
 
         .refresh-button {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
+          gap: 0.4rem;
+          padding: 0.4rem 0.8rem;
           background-color: #3b82f6;
           color: white;
           border: none;
-          border-radius: 0.375rem;
+          border-radius: 0.25rem;
           cursor: pointer;
           transition: background-color 0.2s;
+          font-size: 0.75rem;
         }
 
         .refresh-button:hover {
@@ -554,20 +553,21 @@ function Dashboard() {
         }
 
         .last-refreshed {
-          font-size: 0.875rem;
+          font-size: 0.75rem;
           color: #6b7280;
         }
 
         .filter-toggle {
-          display: none;
+          display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
+          gap: 0.4rem;
+          padding: 0.4rem 0.8rem;
           background-color: white;
           border: 1px solid #e5e7eb;
-          border-radius: 0.375rem;
-          margin-bottom: 1rem;
+          border-radius: 0.25rem;
+          margin-bottom: 0.75rem;
           cursor: pointer;
+          font-size: 0.75rem;
         }
 
         .filter-toggle:hover {
@@ -575,45 +575,46 @@ function Dashboard() {
         }
 
         .filter-panel {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 1rem;
+          display: ${isFilterOpen ? 'grid' : 'none'};
+          grid-template-columns: 1fr;
+          gap: 0.75rem;
           background-color: white;
-          padding: 1rem;
-          border-radius: 0.5rem;
+          padding: 0.75rem;
+          border-radius: 0.25rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
         }
 
         .filter-group {
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.2rem;
         }
 
         .filter-group label {
-          font-size: 0.875rem;
+          font-size: 0.75rem;
           font-weight: 500;
           color: #4b5563;
         }
 
         .filter-group select,
         .filter-group input {
-          padding: 0.5rem;
+          padding: 0.4rem;
           border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
+          border-radius: 0.25rem;
+          font-size: 0.75rem;
+          width: 100%;
         }
 
         .apply-filters {
-          grid-column: 1 / -1;
-          padding: 0.5rem;
+          padding: 0.4rem;
           background-color: #10b981;
           color: white;
           border: none;
-          border-radius: 0.375rem;
+          border-radius: 0.25rem;
           cursor: pointer;
           transition: background-color 0.2s;
+          font-size: 0.75rem;
         }
 
         .apply-filters:hover {
@@ -621,48 +622,49 @@ function Dashboard() {
         }
 
         .error-message {
-          padding: 1rem;
+          padding: 0.75rem;
           background-color: #fee2e2;
           color: #dc2626;
-          border-radius: 0.375rem;
-          margin-bottom: 1.5rem;
+          border-radius: 0.25rem;
+          margin-bottom: 1rem;
           text-align: center;
+          font-size: 0.75rem;
         }
 
         .kpi-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 1rem;
-          margin-bottom: 1.5rem;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.75rem;
+          margin-bottom: 1rem;
         }
 
         .kpi-card {
           background-color: white;
-          border-radius: 0.5rem;
-          padding: 1rem;
+          border-radius: 0.25rem;
+          padding: 0.75rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           display: flex;
-          gap: 1rem;
+          gap: 0.75rem;
           align-items: center;
         }
 
         .kpi-icon {
-          font-size: 1.5rem;
-          padding: 0.5rem;
+          font-size: 1.25rem;
+          padding: 0.4rem;
           border-radius: 50%;
           background-color: rgba(59, 130, 246, 0.1);
           display: flex;
         }
 
         .kpi-content h3 {
-          font-size: 0.875rem;
+          font-size: 0.75rem;
           font-weight: 500;
           color: #6b7280;
-          margin: 0 0 0.25rem;
+          margin: 0 0 0.2rem;
         }
 
         .kpi-content p {
-          font-size: 1.25rem;
+          font-size: 0.875rem;
           font-weight: 600;
           margin: 0;
         }
@@ -672,66 +674,70 @@ function Dashboard() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 2rem;
+          padding: 1.5rem;
           background-color: white;
-          border-radius: 0.5rem;
+          border-radius: 0.25rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          margin-bottom: 1.5rem;
-          gap: 1rem;
+          margin-bottom: 1rem;
+          gap: 0.75rem;
+          font-size: 0.75rem;
         }
 
         .spinner {
-          width: 2rem;
-          height: 2rem;
-          border: 0.25rem solid rgba(59, 130, 246, 0.1);
+          width: 1.5rem;
+          height: 1.5rem;
+          border: 0.2rem solid rgba(59, 130, 246, 0.1);
           border-top-color: #3b82f6;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
 
         .empty-state {
-          padding: 2rem;
+          padding: 1.5rem;
           background-color: white;
-          border-radius: 0.5rem;
+          border-radius: 0.25rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           text-align: center;
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
+          font-size: 0.75rem;
         }
 
         .empty-state button {
-          padding: 0.5rem 1rem;
+          padding: 0.4rem 0.8rem;
           background-color: #3b82f6;
           color: white;
           border: none;
-          border-radius: 0.375rem;
-          margin-top: 1rem;
+          border-radius: 0.25rem;
+          margin-top: 0.75rem;
           cursor: pointer;
+          font-size: 0.75rem;
         }
 
         .charts-section {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 1.5rem;
-          margin-bottom: 1.5rem;
+          gap: 1rem;
+          margin-bottom: 1rem;
         }
 
         .chart-container {
           background-color: white;
-          border-radius: 0.5rem;
-          padding: 1rem;
+          border-radius: 0.25rem;
+          padding: 0.75rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .chart-container h3 {
-          font-size: 1rem;
+          font-size: 0.875rem;
           font-weight: 600;
           color: #1e40af;
-          margin: 0 0 1rem;
+          margin: 0 0 0.75rem;
         }
 
         .chart-wrapper {
-          height: 300px;
+          height: 200px;
           position: relative;
+          width: 100%;
         }
 
         .full-width {
@@ -740,8 +746,8 @@ function Dashboard() {
 
         .recent-sales {
           background-color: white;
-          border-radius: 0.5rem;
-          padding: 1rem;
+          border-radius: 0.25rem;
+          padding: 0.75rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
@@ -749,11 +755,11 @@ function Dashboard() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 1rem;
+          margin-bottom: 0.75rem;
         }
 
         .section-header h3 {
-          font-size: 1rem;
+          font-size: 0.875rem;
           font-weight: 600;
           color: #1e40af;
           margin: 0;
@@ -762,42 +768,43 @@ function Dashboard() {
         .export-button {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
+          gap: 0.4rem;
+          padding: 0.4rem 0.8rem;
           background-color: #10b981;
           color: white;
           border: none;
-          border-radius: 0.375rem;
+          border-radius: 0.25rem;
           cursor: pointer;
+          font-size: 0.75rem;
         }
 
         .table-container {
           overflow-x: auto;
+          width: 100%;
         }
 
         table {
           width: 100%;
-          border-collapse: separate;
-          border-spacing: 0 0.5rem;
-          min-width: 600px;
+          border-collapse: collapse;
+          font-size: 0.75rem;
         }
 
         th {
-          font-size: 0.875rem;
           font-weight: 600;
           color: #1e40af;
-          padding: 0.75rem;
+          padding: 0.5rem;
           background-color: #f9fafb;
           text-align: left;
+          white-space: nowrap;
         }
 
         td {
-          font-size: 0.875rem;
           color: #4b5563;
-          padding: 0.75rem;
+          padding: 0.5rem;
           background-color: white;
           border-top: 1px solid #f3f4f6;
           border-bottom: 1px solid #f3f4f6;
+          white-space: nowrap;
         }
 
         tr:hover td {
@@ -806,60 +813,168 @@ function Dashboard() {
 
         td:first-child {
           border-left: 1px solid #f3f4f6;
-          border-top-left-radius: 0.375rem;
-          border-bottom-left-radius: 0.375rem;
+          border-top-left-radius: 0.25rem;
+          border-bottom-left-radius: 0.25rem;
         }
 
         td:last-child {
           border-right: 1px solid #f3f4f6;
-          border-top-right-radius: 0.375rem;
-          border-bottom-right-radius: 0.375rem;
+          border-top-right-radius: 0.25rem;
+          border-bottom-right-radius: 0.25rem;
         }
 
         /* Responsive Styles */
-        @media (max-width: 1024px) {
-          .charts-section {
-            grid-template-columns: 1fr;
+        @media (min-width: 640px) {
+          .dashboard-container {
+            padding: 1rem;
           }
-        }
 
-        @media (max-width: 768px) {
           .dashboard-header {
-            flex-direction: column;
-            align-items: flex-start;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
             gap: 1rem;
           }
 
-          .dashboard-actions {
-            width: 100%;
-            justify-content: space-between;
+          .dashboard-header h2 {
+            font-size: 1.5rem;
+          }
+
+          .refresh-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+          }
+
+          .last-refreshed {
+            font-size: 0.875rem;
           }
 
           .filter-toggle {
-            display: flex;
+            display: none;
           }
 
           .filter-panel {
-            display: ${isFilterOpen ? 'grid' : 'none'};
-            grid-template-columns: 1fr 1fr;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            padding: 1rem;
+            gap: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .filter-group label {
+            font-size: 0.875rem;
+          }
+
+          .filter-group select,
+          .filter-group input {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+          }
+
+          .apply-filters {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+          }
+
+          .error-message {
+            padding: 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
           }
 
           .kpi-grid {
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .filter-panel {
-            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
           }
 
-          .kpi-grid {
-            grid-template-columns: 1fr;
+          .kpi-card {
+            padding: 1rem;
+          }
+
+          .kpi-icon {
+            font-size: 1.5rem;
+            padding: 0.5rem;
+          }
+
+          .kpi-content h3 {
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+          }
+
+          .kpi-content p {
+            font-size: 1.25rem;
+          }
+
+          .loading-state {
+            padding: 2rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .spinner {
+            width: 2rem;
+            height: 2rem;
+            border-width: 0.25rem;
+          }
+
+          .empty-state {
+            padding: 2rem;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .empty-state button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+          }
+
+          .charts-section {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .chart-container {
+            padding: 1rem;
+          }
+
+          .chart-container h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
           }
 
           .chart-wrapper {
             height: 250px;
+          }
+
+          .section-header {
+            margin-bottom: 1rem;
+          }
+
+          .section-header h3 {
+            font-size: 1rem;
+          }
+
+          .export-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+          }
+
+          th, td {
+            padding: 0.75rem;
+            font-size: 0.875rem;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .filter-panel {
+            grid-template-columns: repeat(4, 1fr);
+          }
+
+          .apply-filters {
+            grid-column: auto;
           }
         }
       `}</style>
