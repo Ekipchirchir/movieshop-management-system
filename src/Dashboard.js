@@ -1,24 +1,99 @@
 import React, { useState, useEffect } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js';
+import { FiDownload, FiFilter, FiDollarSign, FiTrendingUp, FiUsers, FiAward, FiRefreshCw } from 'react-icons/fi';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Title, Tooltip, Legend);
 
 function Dashboard() {
   const [salesData, setSalesData] = useState([]);
-  const [kpis, setKpis] = useState({ totalSales: 0, topEntity: '', customerCount: 0, averageSale: 0 });
+  const [kpis, setKpis] = useState({ 
+    totalSales: 0, 
+    topEntity: '', 
+    customerCount: 0, 
+    averageSale: 0 
+  });
   const [period, setPeriod] = useState('daily');
   const [entityFilter, setEntityFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState('');
 
-  const fetchSales = async () => {
+
+
+  // Duplicate fetchCustomerCount removed to fix redeclaration error.
+
+  const formatEntityName = React.useCallback((entity) => {
+    if (!entity) return 'N/A';
+    return entity
+      .replace('_', ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  }, []);
+
+  const fetchCustomerCount = React.useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://movieshop.up.railway.app/api/customers', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const customers = await response.json();
+        setKpis(prev => ({
+          ...prev,
+          customerCount: Array.isArray(customers) ? customers.length : 0
+        }));
+      }
+    } catch (err) {
+      // Optionally handle error
+    }
+  }, []);
+
+  const processSalesData = React.useCallback((data) => {
+    if (!Array.isArray(data)) {
+      console.error('Expected array, got:', data);
+      setError('Invalid data format from server');
+      setSalesData([]);
+      return;
+    }
+
+    setSalesData(data);
+
+    // Calculate KPIs
+    const totalSales = data.reduce((sum, item) => sum + (item.total || 0), 0);
+    const saleCount = data.reduce((sum, item) => 
+      sum + (item.entities?.reduce((c, e) => c + (e.count || 0), 0) || 0)
+    , 0);
+    const averageSale = saleCount > 0 ? (totalSales / saleCount).toFixed(2) : 0;
+
+    const entityTotals = data.flatMap(item => item.entities || [])
+      .reduce((acc, curr) => ({
+        ...acc,
+        [curr.entity]: (acc[curr.entity] || 0) + (curr.totalAmount || 0),
+      }), {});
+
+    const topEntity = Object.entries(entityTotals).reduce((a, b) => 
+      a[1] > b[1] ? a : b, ['', 0]
+    )[0];
+
+    // Fetch customer count
+    fetchCustomerCount();
+    
+    setKpis({ 
+      totalSales, 
+      topEntity: formatEntityName(topEntity), 
+      customerCount: 0, // Will be updated by fetchCustomerCount
+      averageSale 
+    });
+  }, [fetchCustomerCount, formatEntityName]);
+
+  const fetchSales = React.useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      console.log('Token sent:', token); // Debug token
       if (!token) {
         setError('Please log in to view dashboard');
         localStorage.removeItem('token');
@@ -26,29 +101,31 @@ function Dashboard() {
         return;
       }
 
-      const query = new URLSearchParams({
+      // Build query parameters
+      const queryObj = {
         period,
         ...(entityFilter !== 'all' && { entity: entityFilter }),
         ...(dateRange.start && { startDate: dateRange.start }),
         ...(dateRange.end && { endDate: dateRange.end }),
-      }).toString();
+      };
 
-      const response = await fetch(`http://localhost:5000/api/sales?${query}`, {
+      const query = new URLSearchParams(queryObj).toString();
+      const response = await fetch(`https://movieshop.up.railway.app/api/sales?${query}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.status === 401) {
-        // Attempt to refresh token
-        const refreshResponse = await fetch('http://localhost:5000/api/refresh-token', {
+        const refreshResponse = await fetch('https://movieshop.up.railway.app/api/refresh-token', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
+        
         if (refreshResponse.ok) {
           const { token: newToken } = await refreshResponse.json();
           localStorage.setItem('token', newToken);
-          // Retry the original request
-          const retryResponse = await fetch(`http://localhost:5000/api/sales?${query}`, {
+          const retryResponse = await fetch(`https://movieshop.up.railway.app/api/sales?${query}`, {
             headers: { 'Authorization': `Bearer ${newToken}` },
           });
+          
           if (!retryResponse.ok) {
             throw new Error('Failed to fetch sales data after token refresh');
           }
@@ -60,7 +137,7 @@ function Dashboard() {
           return;
         }
       } else if (!response.ok) {
-        throw new Error('Failed to fetch sales data');
+        throw new Error(`Server error: ${response.status}`);
       } else {
         const data = await response.json();
         processSalesData(data);
@@ -69,52 +146,19 @@ function Dashboard() {
       console.error('Error fetching sales:', err);
       setError(err.message || 'Failed to load dashboard data');
       setSalesData([]);
+    } finally {
+      setLoading(false);
+      setLastRefreshed(new Date().toLocaleTimeString());
     }
-    setLoading(false);
-  };
+  }, [period, entityFilter, dateRange, processSalesData]);
 
-  const processSalesData = (data) => {
-    if (!Array.isArray(data)) {
-      console.error('Expected array, got:', data);
-      setError('Invalid data format from server');
-      setSalesData([]);
-      return;
-    }
-    setSalesData(data);
-
-    // Calculate KPIs
-    const totalSales = data.reduce((sum, item) => sum + item.total, 0);
-    const saleCount = data.reduce((sum, item) => sum + item.entities.reduce((c, e) => c + e.count, 0), 0);
-    const averageSale = saleCount > 0 ? (totalSales / saleCount).toFixed(2) : 0;
-    const entityTotals = data.flatMap(item => item.entities)
-      .reduce((acc, curr) => ({
-        ...acc,
-        [curr.entity]: (acc[curr.entity] || 0) + curr.totalAmount,
-      }), {});
-    const topEntity = Object.entries(entityTotals).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
-
-    const customerResponse = fetch('http://localhost:5000/api/customers', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-    }).then(res => {
-      if (res.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/';
-        return Promise.reject('Unauthorized');
-      }
-      return res.json();
-    }).then(customers => {
-      setKpis({ totalSales, topEntity, customerCount: customers.length, averageSale });
-    }).catch(err => {
-      console.error('Error fetching customers:', err);
-      setError('Failed to load customer data');
-    });
-  };
+  // (moved above processSalesData)
 
   useEffect(() => {
     fetchSales();
-    const interval = setInterval(fetchSales, 30000); // Poll every 30 seconds
+    const interval = setInterval(fetchSales, 300000); // Refresh every 5 minutes
     return () => clearInterval(interval);
-  }, [period, entityFilter, dateRange]);
+  }, [period, entityFilter, dateRange, fetchSales]);
 
   const handleExport = async () => {
     try {
@@ -124,141 +168,174 @@ function Dashboard() {
         ...(dateRange.start && { startDate: dateRange.start }),
         ...(dateRange.end && { endDate: dateRange.end }),
       }).toString();
-      const response = await fetch(`http://localhost:5000/api/sales/export?${query}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://movieshop.up.railway.app/api/sales/export?${query}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/';
-        return;
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales-export-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Export failed');
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sales-${period}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch (err) {
       setError('Error exporting data: ' + err.message);
     }
   };
 
+  const handleRefresh = () => {
+    fetchSales();
+  };
+
+  const handleDateChange = (type, value) => {
+    setDateRange(prev => ({
+      ...prev,
+      [type]: value
+    }));
+  };
+
+  // Chart data configurations
   const barChartData = {
-    labels: salesData.map(item => item._id || period),
-    datasets: [
-      {
-        label: 'Sales (KES)',
-        data: salesData.map(item => item.total),
-        backgroundColor: '#36A2EB',
-        borderColor: '#1E3A8A',
-        borderWidth: 1,
-      },
-    ],
+    labels: salesData.map(item => item._id || 'N/A'),
+    datasets: [{
+      label: 'Sales (KES)',
+      data: salesData.map(item => item.total || 0),
+      backgroundColor: '#3B82F6',
+      borderColor: '#2563EB',
+      borderWidth: 1,
+    }],
   };
 
   const pieChartData = {
-    labels: ['Movie Shop', 'PlayStation Game', 'PlayStation Rental', 'Wi-Fi Vending'],
+    labels: ['Movie Shop', 'PlayStation Games', 'PlayStation Rental', 'Internet'],
     datasets: [{
       data: [
-        salesData.flatMap(item => item.entities.find(e => e.entity === 'movie')?.totalAmount || 0).reduce((a, b) => a + b, 0),
-        salesData.flatMap(item => item.entities.find(e => e.entity === 'playstation_game')?.totalAmount || 0).reduce((a, b) => a + b, 0),
-        salesData.flatMap(item => item.entities.find(e => e.entity === 'playstation_rental')?.totalAmount || 0).reduce((a, b) => a + b, 0),
-        salesData.flatMap(item => item.entities.find(e => e.entity === 'wifi')?.totalAmount || 0).reduce((a, b) => a + b, 0),
+        salesData.flatMap(item => item.entities?.find(e => e.entity === 'movie')?.totalAmount || 0).reduce((a, b) => a + b, 0),
+        salesData.flatMap(item => item.entities?.find(e => e.entity === 'playstation_game')?.totalAmount || 0).reduce((a, b) => a + b, 0),
+        salesData.flatMap(item => item.entities?.find(e => e.entity === 'playstation_rental')?.totalAmount || 0).reduce((a, b) => a + b, 0),
+        salesData.flatMap(item => item.entities?.find(e => e.entity === 'wifi')?.totalAmount || 0).reduce((a, b) => a + b, 0),
       ],
-      backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
-      borderColor: ['#1E3A8A', '#9F1239', '#D97706', '#0E7490'],
+      backgroundColor: ['#3B82F6', '#EF4444', '#FBBF24', '#10B981'],
+      borderColor: ['#2563EB', '#B91C1C', '#D97706', '#059669'],
       borderWidth: 1,
     }],
   };
 
   const lineChartData = {
-    labels: salesData.map(item => item._id || period),
-    datasets: [
-      {
-        label: 'Sales Trend (KES)',
-        data: salesData.map(item => item.total),
-        fill: false,
-        borderColor: '#10B981',
-        tension: 0.4,
-      },
-    ],
+    labels: salesData.map(item => item._id || 'N/A'),
+    datasets: [{
+      label: 'Sales Trend (KES)',
+      data: salesData.map(item => item.total || 0),
+      fill: false,
+      borderColor: '#10B981',
+      tension: 0.4,
+    }],
   };
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { size: 14 } } },
+      legend: { position: 'top' },
       title: {
         display: true,
         text: `${period.charAt(0).toUpperCase() + period.slice(1)} Sales`,
-        font: { size: 20, weight: '700' },
+        font: { size: 16, weight: '600' },
         color: '#1E40AF',
       },
-      tooltip: { enabled: true },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            return ` ${context.dataset.label}: ${context.raw} KES`;
+          }
+        }
+      },
     },
-    animation: { duration: 1000, easing: 'easeOutQuart' },
+    scales: {
+      y: {
+        ticks: {
+          callback: (value) => `${value} KES`
+        }
+      }
+    }
   };
 
+  const kpiCards = [
+    { 
+      label: 'Total Sales', 
+      value: `${kpis.totalSales.toLocaleString()} KES`, 
+      color: '#1E40AF', 
+      icon: <FiDollarSign /> 
+    },
+    { 
+      label: 'Top Entity', 
+      value: kpis.topEntity || 'N/A', 
+      color: '#10B981', 
+      icon: <FiAward /> 
+    },
+    { 
+      label: 'Customers', 
+      value: kpis.customerCount.toLocaleString(), 
+      color: '#EF4444', 
+      icon: <FiUsers /> 
+    },
+    { 
+      label: 'Avg Sale', 
+      value: `${kpis.averageSale} KES`, 
+      color: '#FBBF24', 
+      icon: <FiTrendingUp /> 
+    },
+  ];
+
   return (
-    <div style={{
-      display: 'grid',
-      gap: '24px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      color: '#111827',
-    }}>
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        padding: '24px',
-        borderRadius: '12px',
-        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-        textAlign: 'center',
-      }}>
-        <h2 style={{
-          fontSize: '28px',
-          fontWeight: '700',
-          color: '#1E40AF',
-          marginBottom: '16px',
-        }}>
-          Business Dashboard
-        </h2>
-        <div style={{
-          display: 'flex',
-          gap: '16px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-        }}>
+    <div className="dashboard-container">
+      {/* Dashboard Header */}
+      <div className="dashboard-header">
+        <h2>Business Dashboard</h2>
+        <div className="dashboard-actions">
+          <button 
+            className="refresh-button"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <FiRefreshCw className={loading ? 'spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          {lastRefreshed && (
+            <span className="last-refreshed">
+               {lastRefreshed}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Controls */}
+      <div className={`filter-panel ${isFilterOpen ? 'open' : ''}`}>
+        <div className="filter-group">
+          <label>Period:</label>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '16px',
-              backgroundColor: '#F9FAFB',
-              outline: 'none',
-              width: '200px',
-            }}
           >
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Entity:</label>
           <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '16px',
-              backgroundColor: '#F9FAFB',
-              outline: 'none',
-              width: '200px',
-            }}
           >
             <option value="all">All Entities</option>
             <option value="movie">Movie Shop</option>
@@ -266,220 +343,526 @@ function Dashboard() {
             <option value="playstation_rental">PlayStation Rental</option>
             <option value="wifi">Wi-Fi Vending</option>
           </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Start Date:</label>
           <input
             type="date"
             value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '16px',
-              backgroundColor: '#F9FAFB',
-              outline: 'none',
-              width: '200px',
-            }}
+            onChange={(e) => handleDateChange('start', e.target.value)}
           />
+        </div>
+
+        <div className="filter-group">
+          <label>End Date:</label>
           <input
             type="date"
             value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '16px',
-              backgroundColor: '#F9FAFB',
-              outline: 'none',
-              width: '200px',
-            }}
+            onChange={(e) => handleDateChange('end', e.target.value)}
           />
-          <button
-            onClick={handleExport}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#10B981',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'background-color 0.3s ease',
-            }}
-          >
-            Export CSV
-          </button>
         </div>
+
+        <button 
+          className="apply-filters"
+          onClick={() => {
+            setIsFilterOpen(false);
+            fetchSales();
+          }}
+        >
+          Apply Filters
+        </button>
       </div>
+
+      {/* Mobile Filter Toggle */}
+      <button 
+        className="filter-toggle"
+        onClick={() => setIsFilterOpen(!isFilterOpen)}
+      >
+        <FiFilter />
+        <span>{isFilterOpen ? 'Hide Filters' : 'Show Filters'}</span>
+      </button>
+
+      {/* Error Message */}
       {error && (
-        <p style={{
-          fontSize: '16px',
-          color: '#DC2626',
-          textAlign: 'center',
-          backgroundColor: '#FFF1F2',
-          padding: '12px',
-          borderRadius: '8px',
-        }}>
+        <div className="error-message">
           {error}
-        </p>
+        </div>
       )}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-      }}>
-        {[
-          { label: 'Total Sales', value: `${kpis.totalSales} KES`, color: '#1E40AF' },
-          { label: 'Top Entity', value: kpis.topEntity || 'N/A', color: '#10B981' },
-          { label: 'Customers', value: kpis.customerCount, color: '#FF6384' },
-          { label: 'Average Sale', value: `${kpis.averageSale} KES`, color: '#4BC0C0' },
-        ].map((kpi, index) => (
-          <div key={index} style={{
-            backgroundColor: '#FFFFFF',
-            padding: '16px',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center',
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '500', color: '#4B5563' }}>
-              {kpi.label}
-            </h3>
-            <p style={{ fontSize: '24px', fontWeight: '700', color: kpi.color }}>
-              {kpi.value}
-            </p>
+
+      {/* KPI Cards */}
+      <div className="kpi-grid">
+        {kpiCards.map((kpi, index) => (
+          <div key={index} className="kpi-card">
+            <div className="kpi-icon" style={{ color: kpi.color }}>
+              {kpi.icon}
+            </div>
+            <div className="kpi-content">
+              <h3>{kpi.label}</h3>
+              <p style={{ color: kpi.color }}>{kpi.value}</p>
+            </div>
           </div>
         ))}
       </div>
-      {loading ? (
-        <p style={{
-          fontSize: '16px',
-          color: '#111827',
-          textAlign: 'center',
-          padding: '24px',
-        }}>
-          Loading...
-        </p>
-      ) : salesData.length === 0 ? (
-        <p style={{
-          fontSize: '16px',
-          color: '#111827',
-          textAlign: 'center',
-          padding: '24px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-        }}>
-          No sales data available for the selected filters
-        </p>
-      ) : (
+
+      {/* Loading State */}
+      {loading && (
+        <div className="loading-state">
+          <div className="spinner"></div>
+          Loading dashboard data...
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && salesData.length === 0 && (
+        <div className="empty-state">
+          <p>No sales data available for the selected filters</p>
+          <button onClick={fetchSales}>Try Again</button>
+        </div>
+      )}
+
+      {/* Data Visualization */}
+      {!loading && salesData.length > 0 && (
         <>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '24px',
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-          }}>
-            <div style={{ height: '400px' }}>
-              <Bar data={barChartData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Sales by Period' } } }} />
+          {/* Charts Section */}
+          <div className="charts-section">
+            <div className="chart-container">
+              <h3>Sales by Period</h3>
+              <div className="chart-wrapper">
+                <Bar data={barChartData} options={chartOptions} />
+              </div>
             </div>
-            <div style={{ height: '400px' }}>
-              <Pie data={pieChartData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Sales by Entity' } } }} />
-            </div>
-          </div>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-          }}>
-            <div style={{ height: '400px' }}>
-              <Line data={lineChartData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Sales Trend' } } }} />
+
+            <div className="chart-container">
+              <h3>Sales by Entity</h3>
+              <div className="chart-wrapper">
+                <Pie data={pieChartData} options={chartOptions} />
+              </div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-            overflowX: 'auto',
-          }}>
-            <h3 style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#1E40AF',
-              marginBottom: '16px',
-            }}>
-              Recent Sales
-            </h3>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'separate',
-              borderSpacing: '0 8px',
-              color: '#111827',
-            }}>
-              <thead>
-                <tr>
-                  {['Entity', 'Amount (KES)', 'Date', 'Customer'].map(header => (
-                    <th key={header} style={{
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: '#1E40AF',
-                      padding: '12px',
-                      textAlign: 'left',
-                      backgroundColor: '#F9FAFB',
-                    }}>
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {salesData.flatMap(item => item.entities.map(entity => ({
-                  entity: entity.entity,
-                  amount: entity.totalAmount,
-                  date: item._id,
-                  customer: entity.customerName || 'N/A',
-                }))).slice(0, 10).map((sale, index) => (
-                  <tr key={index} style={{
-                    backgroundColor: '#FFFFFF',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                    borderRadius: '8px',
-                  }}>
-                    <td style={{
-                      padding: '12px',
-                      fontSize: '14px',
-                      color: '#4B5563',
-                      borderTopLeftRadius: '8px',
-                      borderBottomLeftRadius: '8px',
-                    }}>
-                      {sale.entity.replace('_', ' ')}
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#4B5563' }}>
-                      {sale.amount}
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#4B5563' }}>
-                      {sale.date}
-                    </td>
-                    <td style={{
-                      padding: '12px',
-                      fontSize: '14px',
-                      color: '#4B5563',
-                      borderTopRightRadius: '8px',
-                      borderBottomRightRadius: '8px',
-                    }}>
-                      {sale.customer}
-                    </td>
+
+          {/* Trend Chart */}
+          <div className="chart-container full-width">
+            <h3>Sales Trend</h3>
+            <div className="chart-wrapper">
+              <Line data={lineChartData} options={chartOptions} />
+            </div>
+          </div>
+
+          {/* Recent Sales Table */}
+          <div className="recent-sales">
+            <div className="section-header">
+              <h3>Recent Sales</h3>
+              <button 
+                className="export-button"
+                onClick={handleExport}
+              >
+                <FiDownload />
+                <span>Export CSV</span>
+              </button>
+            </div>
+            
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Entity</th>
+                    <th>Amount (KES)</th>
+                    <th>Date</th>
+                    <th>Customer</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {salesData.flatMap(item => 
+                    (item.entities || []).map(entity => ({
+                      entity: entity.entity,
+                      amount: entity.totalAmount,
+                      date: item._id,
+                      customer: entity.customerName || 'N/A',
+                    }))
+                  ).slice(0, 10).map((sale, index) => (
+                    <tr key={index}>
+                      <td>{formatEntityName(sale.entity)}</td>
+                      <td>{sale.amount?.toLocaleString() || '0'}</td>
+                      <td>{sale.date || 'N/A'}</td>
+                      <td>{sale.customer}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
+
+      {/* Styles */}
+      <style jsx>{`
+        .dashboard-container {
+          padding: 1rem;
+          background-color: #f8fafc;
+          font-family: 'Inter', sans-serif;
+        }
+
+        .dashboard-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .dashboard-header h2 {
+          font-size: 1.5rem;
+          color: #1e40af;
+          margin: 0;
+        }
+
+        .dashboard-actions {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .refresh-button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 0.375rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .refresh-button:hover {
+          background-color: #2563eb;
+        }
+
+        .refresh-button:disabled {
+          background-color: #93c5fd;
+          cursor: not-allowed;
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .last-refreshed {
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+
+        .filter-toggle {
+          display: none;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background-color: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.375rem;
+          margin-bottom: 1rem;
+          cursor: pointer;
+        }
+
+        .filter-toggle:hover {
+          background-color: #f9fafb;
+        }
+
+        .filter-panel {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+          background-color: white;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .filter-group label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #4b5563;
+        }
+
+        .filter-group select,
+        .filter-group input {
+          padding: 0.5rem;
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem;
+          font-size: 0.875rem;
+        }
+
+        .apply-filters {
+          grid-column: 1 / -1;
+          padding: 0.5rem;
+          background-color: #10b981;
+          color: white;
+          border: none;
+          border-radius: 0.375rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .apply-filters:hover {
+          background-color: #059669;
+        }
+
+        .error-message {
+          padding: 1rem;
+          background-color: #fee2e2;
+          color: #dc2626;
+          border-radius: 0.375rem;
+          margin-bottom: 1.5rem;
+          text-align: center;
+        }
+
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+          background-color: white;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .kpi-icon {
+          font-size: 1.5rem;
+          padding: 0.5rem;
+          border-radius: 50%;
+          background-color: rgba(59, 130, 246, 0.1);
+          display: flex;
+        }
+
+        .kpi-content h3 {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #6b7280;
+          margin: 0 0 0.25rem;
+        }
+
+        .kpi-content p {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0;
+        }
+
+        .loading-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          background-color: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          margin-bottom: 1.5rem;
+          gap: 1rem;
+        }
+
+        .spinner {
+          width: 2rem;
+          height: 2rem;
+          border: 0.25rem solid rgba(59, 130, 246, 0.1);
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .empty-state {
+          padding: 2rem;
+          background-color: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          text-align: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .empty-state button {
+          padding: 0.5rem 1rem;
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 0.375rem;
+          margin-top: 1rem;
+          cursor: pointer;
+        }
+
+        .charts-section {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .chart-container {
+          background-color: white;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e40af;
+          margin: 0 0 1rem;
+        }
+
+        .chart-wrapper {
+          height: 300px;
+          position: relative;
+        }
+
+        .full-width {
+          grid-column: 1 / -1;
+        }
+
+        .recent-sales {
+          background-color: white;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .section-header h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e40af;
+          margin: 0;
+        }
+
+        .export-button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background-color: #10b981;
+          color: white;
+          border: none;
+          border-radius: 0.375rem;
+          cursor: pointer;
+        }
+
+        .table-container {
+          overflow-x: auto;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0 0.5rem;
+          min-width: 600px;
+        }
+
+        th {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #1e40af;
+          padding: 0.75rem;
+          background-color: #f9fafb;
+          text-align: left;
+        }
+
+        td {
+          font-size: 0.875rem;
+          color: #4b5563;
+          padding: 0.75rem;
+          background-color: white;
+          border-top: 1px solid #f3f4f6;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        tr:hover td {
+          background-color: #f9fafb;
+        }
+
+        td:first-child {
+          border-left: 1px solid #f3f4f6;
+          border-top-left-radius: 0.375rem;
+          border-bottom-left-radius: 0.375rem;
+        }
+
+        td:last-child {
+          border-right: 1px solid #f3f4f6;
+          border-top-right-radius: 0.375rem;
+          border-bottom-right-radius: 0.375rem;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 1024px) {
+          .charts-section {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+
+          .dashboard-actions {
+            width: 100%;
+            justify-content: space-between;
+          }
+
+          .filter-toggle {
+            display: flex;
+          }
+
+          .filter-panel {
+            display: ${isFilterOpen ? 'grid' : 'none'};
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .kpi-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .filter-panel {
+            grid-template-columns: 1fr;
+          }
+
+          .kpi-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .chart-wrapper {
+            height: 250px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
