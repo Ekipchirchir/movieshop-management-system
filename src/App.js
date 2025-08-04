@@ -27,7 +27,7 @@ function App() {
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -82,7 +82,7 @@ function App() {
         <header className="mobile-header">
           <h2 className="app-title">Movie Shop</h2>
           <button className="menu-button" onClick={toggleSidebar}>
-            {isSidebarOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+            {isSidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
           </button>
         </header>
       )}
@@ -134,20 +134,26 @@ function App() {
           flex-direction: column;
           background-color: #f8fafc;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          overflow-x: hidden;
         }
         
         .mobile-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1rem;
+          padding: 0.75rem 1rem;
           background-color: white;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
           z-index: 50;
+          height: 3rem;
         }
         
         .app-title {
-          font-size: 1.25rem;
+          font-size: 1rem;
           font-weight: 600;
           color: #1e40af;
           margin: 0;
@@ -158,49 +164,53 @@ function App() {
           border: none;
           color: #4b5563;
           cursor: pointer;
-          padding: 0.5rem;
+          padding: 0.4rem;
         }
         
         .app-content {
           display: flex;
           flex: 1;
-          position: relative;
+          margin-top: 3rem; /* Space for fixed mobile header */
         }
         
         .sidebar {
-          background-color: white;
+          background-color: lightgreen;
           box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-          transition: transform 0.3s ease;
           z-index: 40;
-          overflow-y: auto;
+          position: fixed;
+          top: 30rem;
+          bottom: 0;
         }
         
         .sidebar-header {
-          padding: 1.5rem 1rem 1rem;
+          padding: 0.75rem;
           border-bottom: 1px solid #e5e7eb;
         }
         
         .sidebar-nav {
           display: flex;
           flex-direction: column;
-          padding: 1rem;
-          gap: 0.5rem;
+          padding: 0.25rem;
+          gap: 0.2rem;
+          max-height: calc(100vh - 3rem); /* Adjust for header */
+          overflow-y: auto;
         }
         
         .nav-button {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.4rem;
           width: 100%;
-          padding: 0.75rem 1rem;
-          border-radius: 0.5rem;
+          padding: 0.4rem 0.6rem;
+          border-radius: 0.25rem;
           border: none;
           background-color: transparent;
           color: #4b5563;
-          font-size: 0.875rem;
+          font-size: 0.7rem;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
+          white-space: nowrap;
         }
         
         .nav-button:hover {
@@ -213,30 +223,32 @@ function App() {
         }
         
         .nav-icon {
-          font-size: 1.125rem;
+          font-size: 0.9rem;
           display: flex;
         }
         
         .nav-label {
           flex: 1;
           text-align: left;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         
         .logout-button {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.4rem;
           width: 100%;
-          padding: 0.75rem 1rem;
-          border-radius: 0.5rem;
+          padding: 0.4rem 0.6rem;
+          border-radius: 0.25rem;
           border: none;
           background-color: #fee2e2;
           color: #dc2626;
-          font-size: 0.875rem;
+          font-size: 0.7rem;
           font-weight: 500;
           cursor: pointer;
-          margin-top: 1rem;
           transition: all 0.2s ease;
+          white-space: nowrap;
         }
         
         .logout-button:hover {
@@ -245,34 +257,65 @@ function App() {
         
         .main-content {
           flex: 1;
-          padding: 1.5rem;
+          padding: 0.5rem;
           width: 100%;
           transition: all 0.3s ease;
+          margin-left: 0;
         }
         
         /* Desktop styles */
         @media (min-width: 768px) {
+          .app-content {
+            margin-top: 0;
+          }
+
+          .mobile-header {
+            display: none;
+          }
+
           .sidebar {
-            width: 240px;
+            width: 200px;
             height: 100vh;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            overflow-y: auto;
+          }
+          
+          .sidebar-header {
+            padding: 1.5rem 1rem 1rem;
+          }
+          
+          .sidebar-nav {
+            padding: 1rem;
+            gap: 0.5rem;
+            max-height: 100vh;
+          }
+          
+          .nav-button, .logout-button {
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+          }
+          
+          .nav-icon {
+            font-size: 1.125rem;
+          }
+          
+          .main-content {
+            padding: 1.5rem;
+            margin-left: 200px;
+            width: calc(100% - 200px);
           }
           
           .main-content.sidebar-open {
-            width: calc(100% - 240px);
-            margin-left: 100px;
+            margin-left: 200px;
           }
         }
         
         /* Mobile styles */
         @media (max-width: 767px) {
           .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 260px;
+            width: 180px;
             transform: translateX(-100%);
           }
           
@@ -281,18 +324,32 @@ function App() {
           }
           
           .main-content {
-            padding: 1rem;
+            padding: 0.5rem;
+            margin-left: 0;
           }
         }
         
         /* Small mobile devices */
         @media (max-width: 480px) {
           .sidebar {
-            width: 220px;
+            width: 160px;
           }
           
-          .main-content {
-            padding: 0.75rem;
+          .nav-button, .logout-button {
+            padding: 0.3rem 0.5rem;
+            font-size: 0.65rem;
+          }
+          
+          .nav-icon {
+            font-size: 0.8rem;
+          }
+          
+          .app-title {
+            font-size: 0.875rem;
+          }
+          
+          .menu-button {
+            padding: 0.3rem;
           }
         }
       `}</style>
