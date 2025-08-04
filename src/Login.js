@@ -8,14 +8,14 @@ function Login({ onLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch('https://movieshop.up.railway.app/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
       const data = await response.json();
       if (response.ok) {
-        console.log('Token received:', data.token); // Debug token
+        console.log('Token received:', data.token);
         localStorage.setItem('token', data.token);
         onLogin();
       } else {
@@ -34,31 +34,32 @@ function Login({ onLogin }) {
       justifyContent: 'center',
       alignItems: 'center',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      padding: '10px',
     }}>
       <div style={{
         backgroundColor: '#FFFFFF',
-        padding: '32px',
-        borderRadius: '12px',
-        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '400px',
+        maxWidth: '350px',
       }}>
         <h2 style={{
-          fontSize: '28px',
+          fontSize: '24px',
           fontWeight: '700',
           color: '#1E40AF',
-          marginBottom: '24px',
+          marginBottom: '16px',
           textAlign: 'center',
         }}>
-          Login to Movie Shop Dashboard
+          Login to Movie Shop
         </h2>
         <form onSubmit={handleSubmit} style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          gap: '12px',
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
               Username
             </label>
             <input
@@ -67,18 +68,19 @@ function Login({ onLogin }) {
               onChange={(e) => setUsername(e.target.value)}
               required
               style={{
-                padding: '12px',
-                borderRadius: '8px',
+                padding: '8px',
+                borderRadius: '6px',
                 border: '1px solid #D1D5DB',
-                fontSize: '16px',
+                fontSize: '14px',
                 backgroundColor: '#F9FAFB',
                 outline: 'none',
-                transition: 'border-color 0.3s ease',
+                width: '100%',
+                boxSizing: 'border-box',
               }}
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
               Password
             </label>
             <input
@@ -87,25 +89,26 @@ function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               style={{
-                padding: '12px',
-                borderRadius: '8px',
+                padding: '8px',
+                borderRadius: '6px',
                 border: '1px solid #D1D5DB',
-                fontSize: '16px',
+                fontSize: '14px',
                 backgroundColor: '#F9FAFB',
                 outline: 'none',
-                transition: 'border-color 0.3s ease',
+                width: '100%',
+                boxSizing: 'border-box',
               }}
             />
           </div>
           <button
             type="submit"
             style={{
-              padding: '12px',
+              padding: '10px',
               backgroundColor: '#10B981',
               color: '#FFFFFF',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
+              borderRadius: '6px',
+              fontSize: '14px',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'background-color 0.3s ease',
@@ -116,14 +119,28 @@ function Login({ onLogin }) {
         </form>
         {error && (
           <p style={{
-            marginTop: '16px',
-            fontSize: '16px',
+            marginTop: '12px',
+            fontSize: '14px',
             color: '#DC2626',
             textAlign: 'center',
           }}>
             {error}
           </p>
         )}
+        <style jsx>{`
+          @media (max-width: 480px) {
+            div[style*="maxWidth: '350px'"] {
+              padding: 12px;
+            }
+            h2 {
+              font-size: 20px;
+            }
+            input, button {
+              font-size: 13px;
+              padding: 8px;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
