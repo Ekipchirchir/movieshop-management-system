@@ -109,9 +109,9 @@ function SalesForm() {
             }}
           >
             <option value="movie">Movie Shop</option>
-            <option value="playstation_game">PlayStation Game (50 KES)</option>
-            <option value="playstation_rental">PlayStation Rental (500 KES)</option>
-            <option value="wifi">Wi-Fi Vending</option>
+            <option value="playstation_game">PlayStation Game </option>
+            <option value="playstation_rental">PlayStation Rental</option>
+            <option value="wifi">Internet</option>
           </select>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
