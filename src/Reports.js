@@ -5,7 +5,7 @@ function Reports() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/sales/export/${period}`, {
+      const response = await fetch(`https://movieshop.up.railway.app/api/sales/export/${period}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       const blob = await response.blob();
@@ -23,38 +23,39 @@ function Reports() {
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
-      padding: '24px',
-      borderRadius: '12px',
-      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
+      padding: '16px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      maxWidth: '100%',
     }}>
       <h2 style={{
-        fontSize: '24px',
+        fontSize: '20px',
         fontWeight: '700',
         color: '#1E40AF',
-        marginBottom: '24px',
+        marginBottom: '16px',
         textAlign: 'center',
       }}>
         Sales Reports
       </h2>
       <div style={{
         display: 'flex',
-        gap: '16px',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '12px',
+        marginBottom: '16px',
+        alignItems: 'center',
       }}>
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
           style={{
-            padding: '12px',
-            borderRadius: '8px',
+            padding: '8px',
+            borderRadius: '6px',
             border: '1px solid #D1D5DB',
-            fontSize: '16px',
+            fontSize: '14px',
             backgroundColor: '#F9FAFB',
             outline: 'none',
-            transition: 'border-color 0.3s ease',
-            width: '200px',
+            width: '100%',
+            maxWidth: '200px',
           }}
         >
           <option value="daily">Daily</option>
@@ -65,12 +66,12 @@ function Reports() {
         <button
           onClick={handleExport}
           style={{
-            padding: '12px 24px',
+            padding: '8px 16px',
             backgroundColor: '#10B981',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
+            borderRadius: '6px',
+            fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             transition: 'background-color 0.3s ease',
@@ -80,15 +81,28 @@ function Reports() {
         </button>
       </div>
       <p style={{
-        fontSize: '16px',
+        fontSize: '14px',
         color: '#4B5563',
         textAlign: 'center',
       }}>
         Select a period and click "Export CSV" to download sales data.
       </p>
+      <style jsx>{`
+        @media (max-width: 480px) {
+          div[style*="maxWidth: '100%'"] {
+            padding: 12px;
+          }
+          h2 {
+            font-size: 18px;
+          }
+          select, button {
+            font-size: 13px;
+            padding: 8px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
 export default Reports;
-
