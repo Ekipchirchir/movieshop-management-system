@@ -9,7 +9,7 @@ function CustomerList() {
     const fetchCustomers = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:5000/api/customers?search=${search}`, {
+        const response = await fetch(`https://movieshop.up.railway.app/api/customers?search=${search}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         });
         const data = await response.json();
@@ -24,7 +24,7 @@ function CustomerList() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/customers', {
+      const response = await fetch('https://movieshop.up.railway.app/api/customers', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       });
       const customers = await response.json();
@@ -47,24 +47,25 @@ function CustomerList() {
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
-      padding: '24px',
-      borderRadius: '12px',
-      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
+      padding: '16px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      maxWidth: '100%',
     }}>
       <h2 style={{
-        fontSize: '24px',
+        fontSize: '20px',
         fontWeight: '700',
         color: '#1E40AF',
-        marginBottom: '24px',
+        marginBottom: '16px',
         textAlign: 'center',
       }}>
         PlayStation Rental Customers
       </h2>
       <div style={{
         display: 'flex',
-        gap: '16px',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
+        flexDirection: 'column',
+        gap: '12px',
+        marginBottom: '16px',
       }}>
         <input
           type="text"
@@ -72,25 +73,24 @@ function CustomerList() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            padding: '12px',
-            borderRadius: '8px',
+            padding: '8px',
+            borderRadius: '6px',
             border: '1px solid #D1D5DB',
-            fontSize: '16px',
+            fontSize: '14px',
             backgroundColor: '#F9FAFB',
             outline: 'none',
-            flex: 1,
-            minWidth: '200px',
+            width: '100%',
           }}
         />
         <button
           onClick={handleExport}
           style={{
-            padding: '12px 24px',
+            padding: '8px 16px',
             backgroundColor: '#10B981',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
+            borderRadius: '6px',
+            fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             transition: 'background-color 0.3s ease',
@@ -101,7 +101,7 @@ function CustomerList() {
       </div>
       {loading ? (
         <p style={{
-          fontSize: '16px',
+          fontSize: '14px',
           color: '#111827',
           textAlign: 'center',
         }}>
@@ -112,17 +112,18 @@ function CustomerList() {
           <table style={{
             width: '100%',
             borderCollapse: 'separate',
-            borderSpacing: '0 8px',
+            borderSpacing: '0 6px',
             color: '#111827',
+            minWidth: '600px',
           }}>
             <thead>
               <tr>
                 {['ID Number', 'Name', 'Address', 'Created At'].map((header) => (
                   <th key={header} style={{
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: '600',
                     color: '#1E40AF',
-                    padding: '12px',
+                    padding: '8px',
                     textAlign: 'left',
                     backgroundColor: '#F9FAFB',
                   }}>
@@ -136,29 +137,29 @@ function CustomerList() {
                 <tr key={customer._id} style={{
                   backgroundColor: '#FFFFFF',
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                 }}>
                   <td style={{
-                    padding: '12px',
-                    fontSize: '14px',
+                    padding: '8px',
+                    fontSize: '13px',
                     color: '#4B5563',
-                    borderTopLeftRadius: '8px',
-                    borderBottomLeftRadius: '8px',
+                    borderTopLeftRadius: '6px',
+                    borderBottomLeftRadius: '6px',
                   }}>
                     {customer.idNumber}
                   </td>
-                  <td style={{ padding: '12px', fontSize: '14px', color: '#4B5563' }}>
+                  <td style={{ padding: '8px', fontSize: '13px', color: '#4B5563' }}>
                     {customer.name}
                   </td>
-                  <td style={{ padding: '12px', fontSize: '14px', color: '#4B5563' }}>
+                  <td style={{ padding: '8px', fontSize: '13px', color: '#4B5563' }}>
                     {customer.address}
                   </td>
                   <td style={{
-                    padding: '12px',
-                    fontSize: '14px',
+                    padding: '8px',
+                    fontSize: '13px',
                     color: '#4B5563',
-                    borderTopRightRadius: '8px',
-                    borderBottomRightRadius: '8px',
+                    borderTopRightRadius: '6px',
+                    borderBottomRightRadius: '6px',
                   }}>
                     {new Date(customer.createdAt).toLocaleDateString()}
                   </td>
@@ -168,6 +169,24 @@ function CustomerList() {
           </table>
         </div>
       )}
+      <style jsx>{`
+        @media (max-width: 480px) {
+          div[style*="maxWidth: '100%'"] {
+            padding: 12px;
+          }
+          h2 {
+            font-size: 18px;
+          }
+          input, button {
+            font-size: 13px;
+            padding: 8px;
+          }
+          th, td {
+            font-size: 12px;
+            padding: 6px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
