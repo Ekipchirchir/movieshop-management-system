@@ -45,7 +45,7 @@ function SalesForm() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/sales', {
+      const response = await fetch('https://movieshop.up.railway.app/api/sales', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,17 +69,17 @@ function SalesForm() {
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
-      padding: '24px',
-      borderRadius: '12px',
-      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-      maxWidth: '600px',
+      padding: '16px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      maxWidth: '100%',
       margin: '0 auto',
     }}>
       <h2 style={{
-        fontSize: '24px',
+        fontSize: '20px',
         fontWeight: '700',
         color: '#1E40AF',
-        marginBottom: '24px',
+        marginBottom: '16px',
         textAlign: 'center',
       }}>
         Record Sale
@@ -87,10 +87,10 @@ function SalesForm() {
       <form onSubmit={handleSubmit} style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: '12px',
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
             Entity
           </label>
           <select
@@ -98,13 +98,14 @@ function SalesForm() {
             value={formData.entity}
             onChange={handleChange}
             style={{
-              padding: '12px',
-              borderRadius: '8px',
+              padding: '8px',
+              borderRadius: '6px',
               border: '1px solid #D1D5DB',
-              fontSize: '16px',
+              fontSize: '14px',
               backgroundColor: '#F9FAFB',
               outline: 'none',
-              transition: 'border-color 0.3s ease',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             <option value="movie">Movie Shop</option>
@@ -113,8 +114,8 @@ function SalesForm() {
             <option value="wifi">Wi-Fi Vending</option>
           </select>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
             Amount (KES)
           </label>
           <input
@@ -124,20 +125,21 @@ function SalesForm() {
             onChange={handleChange}
             required
             style={{
-              padding: '12px',
-              borderRadius: '8px',
+              padding: '8px',
+              borderRadius: '6px',
               border: '1px solid #D1D5DB',
-              fontSize: '16px',
+              fontSize: '14px',
               backgroundColor: '#F9FAFB',
               outline: 'none',
-              transition: 'border-color 0.3s ease',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           />
         </div>
         {formData.entity === 'playstation_rental' && (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
                 ID Number
               </label>
               <input
@@ -147,18 +149,19 @@ function SalesForm() {
                 onChange={handleChange}
                 required
                 style={{
-                  padding: '12px',
-                  borderRadius: '8px',
+                  padding: '8px',
+                  borderRadius: '6px',
                   border: '1px solid #D1D5DB',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   backgroundColor: '#F9FAFB',
                   outline: 'none',
-                  transition: 'border-color 0.3s ease',
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
                 Name
               </label>
               <input
@@ -168,18 +171,19 @@ function SalesForm() {
                 onChange={handleChange}
                 required
                 style={{
-                  padding: '12px',
-                  borderRadius: '8px',
+                  padding: '8px',
+                  borderRadius: '6px',
                   border: '1px solid #D1D5DB',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   backgroundColor: '#F9FAFB',
                   outline: 'none',
-                  transition: 'border-color 0.3s ease',
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
                 Address
               </label>
               <input
@@ -189,13 +193,14 @@ function SalesForm() {
                 onChange={handleChange}
                 required
                 style={{
-                  padding: '12px',
-                  borderRadius: '8px',
+                  padding: '8px',
+                  borderRadius: '6px',
                   border: '1px solid #D1D5DB',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   backgroundColor: '#F9FAFB',
                   outline: 'none',
-                  transition: 'border-color 0.3s ease',
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -204,12 +209,12 @@ function SalesForm() {
         <button
           type="submit"
           style={{
-            padding: '12px',
+            padding: '10px',
             backgroundColor: '#10B981',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
+            borderRadius: '6px',
+            fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             transition: 'background-color 0.3s ease',
@@ -220,8 +225,8 @@ function SalesForm() {
       </form>
       {message && (
         <p style={{
-          marginTop: '16px',
-          fontSize: '16px',
+          marginTop: '12px',
+          fontSize: '14px',
           color: message.includes('Error') ? '#DC2626' : '#10B981',
           textAlign: 'center',
         }}>
@@ -239,28 +244,29 @@ function SalesForm() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
+          padding: '10px',
         }}>
           <div style={{
             backgroundColor: '#FFFFFF',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.2)',
-            maxWidth: '400px',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            maxWidth: '90%',
             textAlign: 'center',
           }}>
-            <p style={{ fontSize: '16px', color: '#111827', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: '#111827', marginBottom: '16px' }}>
               Confirm sale of {formData.amount} KES for {formData.entity.replace('_', ' ')}?
             </p>
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
                 onClick={confirmSubmit}
                 style={{
-                  padding: '12px 24px',
+                  padding: '8px 16px',
                   backgroundColor: '#10B981',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
                   cursor: 'pointer',
                 }}
               >
@@ -269,12 +275,12 @@ function SalesForm() {
               <button
                 onClick={() => setShowConfirm(false)}
                 style={{
-                  padding: '12px 24px',
+                  padding: '8px 16px',
                   backgroundColor: '#DC2626',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
                   cursor: 'pointer',
                 }}
               >
@@ -284,6 +290,24 @@ function SalesForm() {
           </div>
         </div>
       )}
+      <style jsx>{`
+        @media (max-width: 480px) {
+          div[style*="maxWidth: '100%'"] {
+            padding: 12px;
+          }
+          h2 {
+            font-size: 18px;
+          }
+          select, input, button {
+            font-size: 13px;
+            padding: 8px;
+          }
+          div[style*="maxWidth: '90%'"] {
+            max-width: 95%;
+            padding: 12px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
