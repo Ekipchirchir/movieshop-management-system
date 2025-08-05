@@ -270,7 +270,7 @@ function Dashboard() {
     },
     { 
       label: 'Top Entity', 
-      value: kpis.topEntity || 'N/A', 
+      value: kpis.topEntity || ' ', 
       color: '#10B981', 
       icon: <FiAward /> 
     },
